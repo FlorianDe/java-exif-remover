@@ -20,17 +20,9 @@ cache:
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/
 
-build:
-  stage: build
-  script:
-  - ./gradlew assemble
-  artifacts:
-    paths:
-    - build/libs/*.jar
-  only:
-  - master
-
-test:
-  stage: test
-  script:
-  - ./gradlew check
+jobs:
+  include:
+  - stage: build
+    script: ./gradlew build
+  - stage: test
+    script: ./gradlew check
