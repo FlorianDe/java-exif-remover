@@ -8,6 +8,9 @@ stages:
 - build
 - test
 
+before_install:
+- chmod +x gradlew
+
 before_script:
 - export GRADLE_USER_HOME=`pwd`/.gradle
 
