@@ -1,50 +1,41 @@
 language: java
 install: true
-
 jdk:
 - oraclejdk8
-
 stages:
 - build
 - test
 - deploy
-
 before_install:
 - chmod +x gradlew
-
 before_script:
 - export GRADLE_USER_HOME=`pwd`/.gradle
-
 before_cache:
-  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
-  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
-
+- rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+- rm -fr $HOME/.gradle/caches/*/plugin-resolution/
 cache:
   directories:
-    - $HOME/.gradle/caches/
-    - $HOME/.gradle/wrapper/
-
+  - "$HOME/.gradle/caches/"
+  - "$HOME/.gradle/wrapper/"
 build:
   stage: build
   script:
-    - ./gradlew assemble
+  - "./gradlew assemble"
   artifacts:
     paths:
     - build/libs/*.jar
   only:
-    - master
-
+  - master
 test:
   stage: test
   script:
-    - ./gradlew check
-
+  - "./gradlew check"
 deploy:
   provider: releases
   api_key:
-    secure: "MhIy9um8gTOptpuSJzSW3a6OCrBMv/EGvEsq7jJBHsDaauWBeXUli6/uHk9VOYpWa+ZAxKhzh1CJ/vr94zyWakKCvHJtungqxkEM98saNV2oOZrDE6QHsYchAHiZPsL+H+4JDScWcL8SrusMMc97VwGpxfXW7Daj2eIsN5m2FRblW1JFvQTcwr8ksvAOl1pBTJptpuUbi3oqS6JEbVwPJmPh7qRSF2miCp4K+MFgQMhYx7nRxsIn4NwrxsK3HH/sK0dnqOk+ZjP6m07ufuqKCEmQpgvuJZHPWCAlRuhbcv49j8xvfBRhwKh7SAKb8ePj+riA6/1yEHiWRAMwy+vYge0Hrtgo9K/PAUwGpgIdjM0IS22XYFFynlB9tqMzgZv1wbO7tDVJHuiyIPElBd3VSQGeG0Rej2BNrRf3k76cL2OvuevyNwa7zdgxw3/R17xUWnmr+qtHl4Htp7/MWSsckE/ZJNTgzkWXfHei6BHjEp2KQb4CNba9aIONmaBQ6bdrwI/lY78fNHMtZZtiGCrGD3EDvurFtPI7Px+/DZyDWZyvsqymp5/lk8vpH9T9brBzzkkDh/He3un44dFLKmp+TJxgjxadbTBMtVFdpGWmi9erc3ik+Zxif7nDJxSbioB0K0qx7C/6SmHsfeX4FH3NhORruz+6gL0dHmkI1SDAKks="
+    secure: I8wvdWN4rjn5hNUulBjtx4ws19uvvdaqfXOC3+8CivF0I0/72DM3zOZlapjhKh9Jt4APoyr1/DOHYwYQyXazs6QzsDKUXDKfn3srdmO7zB/yw5gBYzShFUKWjQDKhj2f0GztaRO6MVD3zhHPAri5mYFThdsGyj9Z//oRjUs/HvD+T80HZG41Cg4Shzciy2FpdYncbC7skxfZfZP5g+GZcnf2ej+ILE4O28HyXqtQQrS+jnTMRVu3BwHotrH/5Xdf6ifDw0AaMELmszPEJ9VkwJT4F+0mDNR0trHizYLYDAu+NFurn/AlGIrUT9Ouu3k/HqMbAFDKx4S9F7zQNMg4jH9QnqHlXxeZVxtzqMityvqlBHcWI0f/5dMUEy2ykN5Cd3RlELKurB1F+PXvPfjjC9xRgB9hbqUo7uOX5jdtwEc/41LXkXGa2d6QwFAaslE/af7IQ+gqY7rtXuvMTjGnDdflY8nJUnsLN4UCq5stvDrvdhOxc/NnukpUJ25miC5giugTCBipxDUQz5zR/dkS2c5f3vgXKzfPEjEDUxGCco06qBCJVPYL+ht5pM2YMGT6ilUrMQZtdhY7By6G0sOdbDIDoBDFneWkfDYY0KWZGwG6QxSc+gFjQS/6iQaqYiLZXuqJtpozLaivbLntEVdnz3L27I5MSqwL/BfiuWCH7ZU=
   file:
-    - "build/libs/*.jar"
+  - build/libs/*.jar
   skip_cleanup: true
   on:
     tags: true
