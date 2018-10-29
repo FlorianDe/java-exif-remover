@@ -22,3 +22,9 @@ jar {
         )
     }
 }
+
+task showOutput {
+    doLast {
+        new File("${buildDir}").traverse{ println it}
+    }
+}
