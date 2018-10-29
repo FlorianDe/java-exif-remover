@@ -3,7 +3,6 @@ install: true
 jdk:
 - oraclejdk8
 stages:
-- test
 - build
 - deploy
 
@@ -30,10 +29,8 @@ build:
   only:
   - master
 
-test:
-  stage: test
-  script:
-  - "./gradlew check"
+after_build:
+- "./gradlew showOutput"
 
 deploy:
   provider: releases
