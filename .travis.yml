@@ -26,9 +26,7 @@ build:
   stage: build
   script:
     - "./gradlew assemble"
-  artifacts:
-    paths:
-    - build/libs/*.jar
+  skip_cleanup: true
   only:
   - master
 
