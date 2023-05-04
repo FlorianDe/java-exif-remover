@@ -33,4 +33,5 @@ jobs:
           asset_path: ./build/libs/*.jar
           asset_name: java-exif-remover-${{ steps.get_tag_name.outputs.tag_name }}.jar
           asset_content_type: application/java-archive
+          distribution: public
           api_key: ${{ secrets.GITHUB_TOKEN }}
