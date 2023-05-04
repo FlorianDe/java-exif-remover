@@ -27,11 +27,16 @@ jobs:
         id: get_tag_name
         run: echo "::set-output name=tag_name::${GITHUB_REF#refs/tags/}"
 
-      - name: Publish Jar to GitHub Releases
-        uses: actions/upload-release-asset@v1
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./build/libs/*.jar
-          asset_name: java-exif-remover-${{ steps.get_tag_name.outputs.tag_name }}.jar
-          asset_content_type: application/java-archive
-          api_key: ${{ secrets.GITHUB_TOKEN }}
+          files: ./build/libs/*.jar
+          tag_name: ${{ steps.get_tag_name.outputs.tag_name }}
+          name: Release ${{ steps.get_tag_name.outputs.tag_name }}
+          body: |
+            Release ${{ steps.get_tag_name.outputs.tag_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
