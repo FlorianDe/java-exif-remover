@@ -5,26 +5,36 @@ plugins {
 group 'de.florian.exif.remover'
 version '1.0'
 
-sourceCompatibility = 1.8
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    implementation("com.github.weisj:darklaf-core:3.0.2")
+    testImplementation("junit:junit:4.13.2")
 }
 
 jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
         attributes(
                 'Main-Class': "${this.group}.Application"
         )
     }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
 
 task showOutput {
     doLast {
-        new File("${buildDir}").traverse{ println it}
+        new File("${buildDir}").traverse { println it }
     }
+}
+
+compileJava {
+    options.compilerArgs.addAll(['--release', '8'])
 }

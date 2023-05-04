@@ -16,7 +16,7 @@ public class FilterableJFileChooser extends JFileChooser {
     }
 
     public FilterableJFileChooser(File currentDirectory, boolean multipleSelection, JComponent accessory, FileFilter... filerfilters) {
-        super("Choose a file/s");
+        super();
 
         FilterableJFileChooser.disableNewFolderButton(this);
         if (filerfilters.length > 0) {

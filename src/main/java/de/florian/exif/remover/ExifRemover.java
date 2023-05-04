@@ -1,31 +1,27 @@
 package de.florian.exif.remover;
 
-import de.florian.exif.remover.view.FilterableJFileChooser;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.FileImageOutputStream;
-import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
+import java.util.function.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
+import java.util.stream.Stream;
 
 public class ExifRemover {
 
-    enum Ext {
+    public enum Ext {
         PNG,
         JPG,
         JPEG;
@@ -34,71 +30,63 @@ public class ExifRemover {
             return "\\." + this.name();
         }
 
-        static String getOrRegex() {
-            return "(" + String.join("|", Arrays.stream(values()).map(Ext::regex).collect(Collectors.toList())) + ")";
+        public static String getOrRegex() {
+            return "(" + Arrays.stream(values()).map(Ext::regex).collect(Collectors.joining("|")) + ")";
         }
 
-        static String[] getNames() {
+        public static String[] getNames() {
             return Arrays.stream(values()).map(Ext::name).toArray(String[]::new);
         }
 
-        static String getExtensionDescription() {
-            return "(" + String.join(", ", Arrays.stream(values()).map(Ext::name).collect(Collectors.toList())) + ")";
+        public static String getExtensionDescription() {
+            return "(" + Arrays.stream(values()).map(Ext::name).collect(Collectors.joining(", ")) + ")";
         }
     }
 
     private final Pattern imageEndingPattern = Pattern.compile(Ext.getOrRegex(), Pattern.CASE_INSENSITIVE);
 
-    public void run() {
 
-        FileNameExtensionFilter imagefilesExtensionFilter = new FileNameExtensionFilter("Supported files " + Ext.getExtensionDescription(), Ext.getNames());
+    public Stream<File> traverseFile(File file, Predicate<? super File> filter) throws IOException {
+        Predicate<? super File> fileFilter = Optional.of(filter).orElse((f) -> true);
+        return Files.walk(Paths.get(file.getPath()))
+                .filter(Files::isRegularFile)
+                .map(Path::toFile)
+                .filter(fileFilter);
+    }
 
-        FilterableJFileChooser cfc = new FilterableJFileChooser(new File("."), true, null, imagefilesExtensionFilter);
-        cfc.setDialogTitle("Select the source images/folders.");
+    public long count(File[] files, Predicate<? super File> filter) throws IOException {
+        return Arrays.stream(files).reduce(0L, (acc, file) -> {
+            try {
+                System.out.println("Counting files in " + file.getPath());
+                return acc + this.count(file, filter);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }, Long::sum);
+    }
 
-        int selectFilesResult = cfc.showOpenDialog(null);
-        switch (selectFilesResult) {
-            case JFileChooser.APPROVE_OPTION:
-                String userDir = System.getProperty("user.home");
-                JFileChooser dfFileChooser = new JFileChooser(userDir + "/Desktop");
-                dfFileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-                dfFileChooser.setDialogTitle("Select the destination folder.");
-                int selectDestinationResult = dfFileChooser.showOpenDialog(null);
-                switch (selectDestinationResult) {
-                    case JFileChooser.APPROVE_OPTION:
-                        for (File fileTier0 : cfc.getSelectedFiles()) {
-                            System.out.println("Processing " + fileTier0 + " element.");
-                            try {
-                                List<Path> filePaths = Files.walk(Paths.get(fileTier0.getPath()))
-                                        .filter(Files::isRegularFile)
-                                        .filter(p -> imagefilesExtensionFilter.accept(p.toFile()))
-                                        .collect(Collectors.toList());
+    public long count(File file, Predicate<? super File> filter) throws IOException {
+        return this.traverseFile(file, filter).count();
+    }
 
-                                for (Path filePath : filePaths) {
-                                    String relative = fileTier0.getParentFile().toURI().relativize(filePath.toUri()).getPath();
-                                    removeMetaData(new File(filePath.toUri()), new File(dfFileChooser.getSelectedFile(), relative));
-                                }
-                            } catch (IOException err) {
-                                System.out.println("Cannot load: " + fileTier0.getPath());
-                            }
-                        }
-                        break;
-                    default:
-                        System.out.println("Process canceled by the user while selecting destination folder.");
-                        break;
+    public void copy(File[] files, File destination, Predicate<? super File> filter, boolean flattenFiles, BiConsumer<File, File> fileCopiedCallback) throws IOException {
+        for (File fileTier0 : files) {
+            this.traverseFile(fileTier0, filter).forEach((file) -> {
+                String relative = fileTier0.getParentFile().toURI().relativize(file.toURI()).getPath();
+                File src = new File(file.toURI());
+                File target;
+                if (flattenFiles) {
+                    target = new File(destination, file.getName());
+                } else {
+                    target = new File(destination, relative);
                 }
-                break;
-            case JFileChooser.CANCEL_OPTION:
-                System.out.println("Process canceled by the user while selecting the source folders/items.");
-                break;
-            case JFileChooser.ERROR_OPTION:
-                System.out.println("Error while processing.");
-                break;
+                copyImageWithoutMetaData(src, target);
+                fileCopiedCallback.accept(src, target);
+            });
         }
     }
 
-
-    private void removeMetaData(File file, File outputFile) {
+    private void copyImageWithoutMetaData(File file, File outputFile) {
         try {
             BufferedImage image = ImageIO.read(file);
             if (image != null) {
@@ -120,16 +108,20 @@ public class ExifRemover {
 
                         case JPG:
                         case JPEG:
-                            FileImageOutputStream output = new FileImageOutputStream(outputFile);
-
-                            Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName(foundFileEnding);
-                            ImageWriter writer = iter.next();
-                            ImageWriteParam iwp = writer.getDefaultWriteParam();
-                            iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                            iwp.setCompressionQuality(1.0f);
-                            writer.setOutput(output);
-                            writer.write(null, new IIOImage(image, null, null), iwp);
-                            writer.dispose();
+                            try (FileImageOutputStream output = new FileImageOutputStream(outputFile)) {
+                                Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName(foundFileEnding);
+                                ImageWriter writer = iter.next();
+                                ImageWriteParam iwp = writer.getDefaultWriteParam();
+                                iwp.setCompressionMode(ImageWriteParam.MODE_COPY_FROM_METADATA);
+//                            iwp.setTilingMode(ImageWriteParam.MODE_COPY_FROM_METADATA);
+//                            iwp.setProgressiveMode(ImageWriteParam.MODE_COPY_FROM_METADATA);
+//                            iwp.setCompressionQuality(1.0f);
+                                writer.setOutput(output);
+                                writer.prepareWriteSequence(null);
+                                writer.write(null, new IIOImage(image, null, null), iwp);
+                                writer.endWriteSequence();
+                                writer.dispose();
+                            }
 
                             System.out.printf("Removed metadata from jpg/jpeg file: %s and saved to %s\n", file, outputFile);
                             break;

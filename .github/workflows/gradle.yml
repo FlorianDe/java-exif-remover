@@ -1,20 +1,36 @@
-name: Java CI
+name: Build and Publish
 
 on:
   push:
-    branches:
-    - master
+    tags:
+      - 'v*'
 
 jobs:
-  build:
-
+  build-and-publish:
+    name: Build and Publish Java Jar
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up JDK 1.8
-      uses: actions/setup-java@v1
-      with:
-        java-version: 1.8
-    - name: Build with Gradle
-      run: ./gradlew assemble
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Java
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+
+      - name: Build Java Jar
+        run: ./gradlew clean build
+
+      - name: Get Tag Name
+        id: get_tag_name
+        run: echo "::set-output name=tag_name::${GITHUB_REF#refs/tags/}"
+
+      - name: Publish Jar to GitHub Releases
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./build/libs/*.jar
+          asset_name: java-exif-remover-${{ steps.get_tag_name.outputs.tag_name }}.jar
+          asset_content_type: application/java-archive
+          api_key: ${{ secrets.GITHUB_TOKEN }}
